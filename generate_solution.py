@@ -23,28 +23,7 @@ def generate_solution():
             """
             for i in range(9):
                 for j in range(9):
-
-                    if i <= 2:  # i.e. i in [0, 1, 2]
-                        if j <= 2:
-                            sub_num = 0
-                        elif 2 < j < 6:
-                            sub_num = 1
-                        else:
-                            sub_num = 2
-                    elif 2 < i < 6:
-                        if j <= 2:
-                            sub_num = 3
-                        elif 2 < j < 6:
-                            sub_num = 4
-                        else:
-                            sub_num = 5
-                    else:
-                        if j <= 2:
-                            sub_num = 6
-                        elif 2 < j < 6:
-                            sub_num = 7
-                        else:
-                            sub_num = 8
+                    sub_num = get_subgrid_number(i, j)
 
                     valid_options = list(rows[i].intersection(cols[j]).intersection(subgrids[sub_num]))
                     insert_val = random.choice(valid_options)
@@ -57,3 +36,29 @@ def generate_solution():
 
         except IndexError as e:
             pass
+
+
+def get_subgrid_number(i, j):
+    if i <= 2:  # i.e. i in [0, 1, 2]
+        if j <= 2:
+            sub_num = 0
+        elif 2 < j < 6:
+            sub_num = 1
+        else:
+            sub_num = 2
+    elif 2 < i < 6:
+        if j <= 2:
+            sub_num = 3
+        elif 2 < j < 6:
+            sub_num = 4
+        else:
+            sub_num = 5
+    else:
+        if j <= 2:
+            sub_num = 6
+        elif 2 < j < 6:
+            sub_num = 7
+        else:
+            sub_num = 8
+
+    return sub_num
