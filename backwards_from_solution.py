@@ -2,7 +2,6 @@
     build a minimal sudoku backwards from a known solution
 """
 import random
-import sys
 
 from generate_solution import generate_solution, get_subgrid_number
 
@@ -12,12 +11,15 @@ output_solutions = list()
 
 def backwards_from_solution():
     solution = generate_solution()
-    copy = [list.copy(r) for r in solution]
 
-    rows = [[] for i in range(9)]
-    cols = [[] for i in range(9)]
-    subgrids = [[] for i in range(9)]
+    stable_copy = [r.copy() for r in solution]
+    stable_rows = [[] for i in range(9)]
+    stable_cols = [[] for i in range(9)]
+    stable_subgrids = [[] for i in range(9)]
 
+    removed_indexes = list()
+
+    print("Solution:")
     f = open("sudoku_solution.txt", "w")
     for r in solution:
         print(r)
@@ -25,22 +27,46 @@ def backwards_from_solution():
         f.write("\n")
     f.close()
 
-    # Randomly select an index to remove from the grid
-    rand_i = random.randint(0, 8)
-    rand_j = random.randint(0, 8)
+    while len(removed_indexes) < 81:
 
-    for r in copy:
+        [copy1, rows1, cols1, subgrids1] = safe_grid_copy(stable_copy, stable_rows, stable_cols, stable_subgrids)
+        [copy2, rows2, cols2, subgrids2] = safe_grid_copy(stable_copy, stable_rows, stable_cols, stable_subgrids)
+
+        while True:
+            # Randomly select an index to remove from the grid
+            # keep randomly picking if have already tried this index
+            rand_i = random.randint(0, 8)
+            rand_j = random.randint(0, 8)
+            if [rand_i, rand_j] not in removed_indexes:
+                removed_indexes.append([rand_i, rand_j])  # add to the list of removed indexes
+                break
+
+        remove_cell(rand_i, rand_j, rows1, cols1, subgrids1, solution, copy1)
+        remove_cell(rand_i, rand_j, rows2, cols2, subgrids2, solution, copy2)
+
+        # now validate the grid
+        ret1 = validator(copy1, rows1, cols1, subgrids1, False)
+        ret2 = validator(copy2, rows2, cols2, subgrids2, True)
+
+        if compare_solutions(ret1, ret2):
+            # then we can continue, cell removed - since still unique solution
+            remove_cell(rand_i, rand_j, stable_rows, stable_cols, stable_subgrids, solution, stable_copy)
+
+        # otherwise nothing - change will be reset on next iteration
+
+    erasure_cnt = 0
+    print("\nFinal Grid:")
+    f = open("minimal_sudoku.txt", "w")
+    for r in stable_copy:
+        for el in r:
+            if el is None:
+                erasure_cnt += 1
         print(r)
+        f.write(",".join([str(e) for e in r]))
+        f.write("\n")
+    f.close()
 
-    print("\n")
-
-    remove_cell(rand_i, rand_j, rows, cols, subgrids, solution, copy)
-
-    for r in copy:
-        print(r)
-
-    # now validate the grid
-    validator(copy, rows, cols, subgrids)
+    print("Number of clues: {}".format(81 - erasure_cnt))
 
     return
 
@@ -99,9 +125,9 @@ def validator(grid, rows, cols, subgrids, permuteDescending):   # ensure valid g
 
                         # if there are no elements in the constraint lists
                         if not (any(rows) and any(cols) and any(subgrids)):
-                            print("Solution Found:")
-                            for r in val_copy:
-                                print(r)
+                            #print("Solution Found:")
+                            #for r in val_copy:
+                            #    print(r)
                             return val_copy
                 else:
                     return   # since this is not a valid route (empty intersection with None in a cell)
@@ -155,12 +181,7 @@ def test_validator_againstDuplicateGrid():
     ret2 = validator(copy2, rows2, cols2, subgrids2, True)
     print("Val Count Descending: {}".format(validator_count))
 
-    matched_solutions = True
-    for ind, el in enumerate(ret1):
-        if ret2[ind] != el:
-            matched_solutions = False
-
-    print("Solutions Match? {}".format(matched_solutions))
+    print("Solutions Match? {}".format(compare_solutions(ret1, ret2)))
 
     return
 
@@ -218,12 +239,62 @@ def test_using_kaggleSource():
     ret2 = validator(sol_copy2, rows2, cols2, subgrids2, True)  # now descending
     print("Val Count Descending: {}".format(validator_count))
 
-    matched_solutions = True
-    for ind, el in enumerate(ret1):
-        if ret2[ind] != el:
-            matched_solutions = False
+    print("Solutions Match? {}".format(compare_solutions(ret1, ret2)))
 
-    print("Solutions Match? {}".format(matched_solutions))
+
+def test_backwardsOutput():
+    f = open("minimal_sudoku.txt", "r")
+    lines = f.readlines()
+    removed_grid = [[] for i in range(9)]
+    for ind,line in enumerate(lines):
+        for el in line.split(","):
+            if el == "None" or el == "None\n":
+                removed_grid[ind].append(None)
+            else:
+                removed_grid[ind].append(int(el))
+
+    f = open("sudoku_solution.txt", "r")
+    lines = f.readlines()
+    solution = [[] for r in range(9)]
+    for ind,line in enumerate(lines):
+        for el in line.split(","):
+            solution[ind].append(int(el))
+
+    indexes_to_remove = list()
+
+    for i in range(9):
+        for j in range(9):
+            if removed_grid[i][j] == None:
+                indexes_to_remove.append([i, j])
+
+    copy1 = [x.copy() for x in solution]
+    rows1 = [[] for x in range(9)]
+    cols1 = [[] for x in range(9)]
+    subgrids1 = [[] for x in range(9)]
+
+    for el in indexes_to_remove:
+        remove_cell(el[0], el[1], rows1, cols1, subgrids1, solution, copy1)
+
+    [copy2, rows2, cols2, subgrids2] = safe_grid_copy(copy1, rows1, cols1, subgrids1)
+
+    ret1 = validator(copy1, rows1, cols1, subgrids1, False)
+    ret2 = validator(copy2, rows2, cols2, subgrids2, True)
+    print("Matched Outputs: {}".format(compare_solutions(ret1, ret2)))
+
+    cnt = 0
+
+    for r in copy1:
+        for el in r:
+            if el is None:
+                cnt += 1
+    print("Number of erasures: {}".format(81 - cnt))
+
+
+def compare_solutions(sol1, sol2):   # return True if solutions are the same
+    for ind, el in enumerate(sol1):
+        if sol2[ind] != el:
+            return False
+    return True
 
 
 def safe_grid_copy(grid, rows, cols, subgrids):  # returns list of the grid config in the form [grid, rows, cols, subgrids]
@@ -231,9 +302,10 @@ def safe_grid_copy(grid, rows, cols, subgrids):  # returns list of the grid conf
 
 
 def main():
-    #backwards_from_solution()
-    test_validator_againstDuplicateGrid()
+    backwards_from_solution()
+    #test_validator_againstDuplicateGrid()
     #test_using_kaggleSource()
+    #test_backwardsOutput()
 
 
 if __name__ == '__main__':
