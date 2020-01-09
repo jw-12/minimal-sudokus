@@ -151,11 +151,11 @@ def main():
 
     load_dotenv()  # read in the environment variables
     if local:
-        host = os.environ['LOCAL_HOST']
+        host = os.environ['DB_LOCAL_HOST']
     else:
-        host = os.environ['REMOTE_HOST']
-    conn = pg.connect(user=os.environ['USER'], password=os.environ['PASSWORD'], host=host, port=os.environ['PORT'],
-                      database=os.environ['DATABASE'])
+        host = os.environ['DB_REMOTE_HOST']
+    conn = pg.connect(user=os.environ['DB_USER'], password=os.environ['DB_PASSWORD'], host=host, port=os.environ['DB_PORT'],
+                      database=os.environ['DB_DATABASE'])
     cur = conn.cursor()
 
     for i in range(1):
