@@ -158,7 +158,7 @@ def main():
                       database=os.environ['DB_DATABASE'])
     cur = conn.cursor()
 
-    for i in range(1):
+    for i in range(1000):
         backwards_from_solution(conn, cur)
 
     # close connection
