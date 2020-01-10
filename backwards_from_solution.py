@@ -19,15 +19,22 @@ Writes relevant data to postgres database """
 
 def backwards_from_solution(conn, cur):
 
+    global validator_count  # used to count branches
+
+    start_exec = dt.datetime.now()
+
+    solution = generate_solution()
+    stable_copy = [r.copy() for r in solution]
+    removed_indexes = list()
+
+    # write solution to output file in case of stall
+    f = open("current_grid.txt", "w")
+    for r in solution:
+        for el in r:
+            f.write("{}".format(el))
+    f.close()
+
     try:
-        global validator_count  # used to count branches
-
-        start_exec = dt.datetime.now()
-
-        solution = generate_solution()
-        stable_copy = [r.copy() for r in solution]
-        removed_indexes = list()
-
         while len(removed_indexes) < 81:
             rem_copy = [r.copy() for r in stable_copy]  # copy to the removal copy which we can try remove cells from
             while True:
